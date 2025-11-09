@@ -17,9 +17,9 @@ router.post('/', createNote);
 router.get('/', getNotes);
 router.put('/:id', updateNote);
 router.delete('/:id', deleteNote);
-router.put("/:id/share", auth, shareNote);
-router.put("/:id/toggle-access/:userId", auth, toggleAccess);
-router.delete("/:id/revoke/:userId", auth, revokeAccess);
+router.put("/:id/share", shareNote);
+router.put("/:id/toggle-access/:userId", toggleAccess);
+router.delete("/:id/revoke/:userId", revokeAccess);
 
 
 

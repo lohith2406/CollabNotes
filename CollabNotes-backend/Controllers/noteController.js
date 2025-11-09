@@ -1,12 +1,13 @@
-const Note = require('../models/Note');
-const User = require("../models/User");
+const Note = require('../Models/Note');
+const User = require('../Models/User');
 
 exports.createNote = async (req, res) => {
   const { title, content } = req.body;
 
   try {
+    // Create a new note, setting the 'user' field to the logged-in user's ID (from middleware)
     const note = await Note.create({ user: req.user, title, content });
-    res.status(201).json(note);
+    res.status(201).json(note); // Send back the newly created note
   } catch (err) {
     res.status(500).json({ message: 'Failed to create note', error: err.message });
   }
@@ -16,12 +17,12 @@ exports.getNotes = async (req, res) => {
   try {
     const notes = await Note.find({
       $or: [
-        { user: req.user },
-        { sharedWith: { $elemMatch: { user: req.user } } }
+        { user: req.user }, // Notes created by the user
+        { sharedWith: { $elemMatch: { user: req.user } } } // Notes shared with the user
       ]
     })
-    .populate("sharedWith.user", "email") // <-- this line
-    .sort({ updatedAt: -1 });
+    .populate("sharedWith.user", "email") // Join 'user' field in sharedWith, return only email
+    .sort({ updatedAt: -1 }); // Sort notes by most recently updated
 
     res.status(200).json(notes);
   } catch (err) {
@@ -40,16 +41,20 @@ exports.updateNote = async (req, res) => {
 
     const userId = req.user;
 
+     // Check if the logged-in user is the owner
     const isOwner = note.user.toString() === userId;
 
+    // Check if the user is in sharedWith and has edit permission
     const isEditor = note.sharedWith.some(
       (entry) => entry.user.toString() === userId && entry.canEdit
     );
 
+    // Deny update if not owner or editor
     if (!isOwner && !isEditor) {
       return res.status(403).json({ message: "You don't have permission to edit this note" });
     }
 
+    // Update note
     note.title = title;
     note.content = content;
     await note.save();
@@ -65,6 +70,7 @@ exports.deleteNote = async (req, res) => {
   const { id } = req.params;
 
   try {
+    // Delete note only if it belongs to the user
     const note = await Note.findOneAndDelete({ _id: id, user: req.user });
     if (!note) return res.status(404).json({ message: 'Note not found' });
 
@@ -87,6 +93,7 @@ exports.shareNote = async (req, res) => {
 
     const { email, canEdit } = req.body;
 
+    // Find the user to share with, using email
     const targetUser = await User.findOne({ email });
     if (!targetUser) return res.status(404).json({ message: "User not found" });
 
@@ -96,11 +103,12 @@ exports.shareNote = async (req, res) => {
     );
 
     if (alreadyShared) {
-      alreadyShared.canEdit = canEdit; // update permission
+      alreadyShared.canEdit = canEdit; // Update permission
     } else {
+      // Add new entry to sharedWith
       note.sharedWith.push({
         user: targetUser._id,
-        canEdit: !!canEdit,
+        canEdit: !!canEdit, // To ensure that you always get a strict boolean (true or false)
       });
     }
 
@@ -116,9 +124,11 @@ exports.toggleAccess = async (req, res) => {
     const note = await Note.findById(req.params.id);
     if (!note) return res.status(404).json({ message: "Note not found" });
 
+    // Only owner can toggle access
     if (note.user.toString() !== req.user)
       return res.status(403).json({ message: "Not allowed" });
 
+    // Find the shared user to toggle
     const sharedUser = note.sharedWith.find((entry) =>
       entry.user.toString() === req.params.userId
     );
@@ -140,12 +150,16 @@ exports.revokeAccess = async (req, res) => {
   const { id, userId } = req.params;
   try {
     const note = await Note.findById(id);
+
+    // Only the owner can revoke access
     if (!note || note.user.toString() !== req.user) {
       return res.status(403).json({ message: "Not allowed" });
     }
 
+    // Remove the user from sharedWith array
     note.sharedWith = note.sharedWith.filter(entry => entry.user.toString() !== userId);
     await note.save();
+
     res.json({ message: "Access revoked" });
   } catch (err) {
     res.status(500).json({ message: "Failed to revoke access", error: err.message });

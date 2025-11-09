@@ -1,8 +1,25 @@
-# Getting Started with Create React App
+# CollabNotes Frontend
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Real-time collaborative note-taking application built with React and Socket.IO.
+
+## Setup
+
+1. Install dependencies:
+```bash
+npm install
+```
+
+2. Create a `.env` file in the root directory:
+```env
+REACT_APP_API_URL=http://localhost:5000/api
+REACT_APP_SOCKET_URL=http://localhost:5000
+```
+
+3. Make sure the backend server is running on port 5000.
 
 ## Available Scripts
+
+This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
 In the project directory, you can run:
 
